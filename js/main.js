@@ -2,7 +2,7 @@ const canvas = document.getElementById("myCanvas");
 const ctx = canvas.getContext("2d");
 
 const paddleHeight = 10; // параметры ракетки для отбивания
-let paddleWidth = 75;
+const paddleWidth = 75;
 let paddleX = (canvas.width - paddleWidth) / 2;
 let score = 0;
 let lives = 3;
@@ -10,8 +10,6 @@ let level = 1;
 
 let rightPressed = false;
 let leftPressed = false;
-
-let requestId = 0;
 
 let ballRadius = 10;
 let x = canvas.width / 2;
@@ -36,12 +34,32 @@ function getRandomColor() {
   return "#000000".slice(0, -color.length) + color;
 }
 
+function nextLevel() {
+  alert(`YOU WIN, CONGRATULATIONS!`);
+  score = 0;
+  level++;
+  dx = Math.abs(dx * 1.5);
+  dy = Math.abs(dy * 1.5) * -1;
+
+  ballRadius -= 1;
+  brickRowCount += 1;
+  x = canvas.width / 2;
+  y = canvas.height - 30;
+  paddleX = (canvas.width - paddleWidth) / 2;
+  buildBricks();
+  drawBall();
+  if (level > 3) {
+    alert("You are winner!");
+    document.location.reload();
+  }
+}
+
 function buildBricks() {
   bricks = [];
   for (let c = 0; c < brickColumnCount; c++) {
     bricks[c] = []; // массив который содержит значения столбца и строки
     for (let r = 0; r < brickRowCount; r++) {
-      bricks[c][r] = { x: 0, y: 0, status: 1, color: getRandomColor() };
+      bricks[c][r] = { x: null, y: null, status: 1, color: getRandomColor() };
     }
   }
 }
@@ -83,64 +101,6 @@ function drawPaddle() {
   ctx.fill();
   ctx.closePath();
 }
-
-document.addEventListener("keydown", keyDownHandler, false);
-document.addEventListener("keyup", keyUpHandler, false);
-document.addEventListener("mousemove", mouseMoveHandler, false);
-
-function keyDownHandler(e) {
-  // когда кнопка нажата
-  if (e.keyCode == 39) {
-    // код 37 — это клавиша стрелка влево
-    rightPressed = true; // 39 — стрелка вправо.
-  } else if (e.keyCode == 37) {
-    leftPressed = true;
-  }
-}
-
-function keyUpHandler(e) {
-  // когда кнопка отжата
-  if (e.keyCode == 39) {
-    rightPressed = false;
-  } else if (e.keyCode == 37) {
-    leftPressed = false;
-  }
-}
-function collisionDetection() {
-  for (let c = 0; c < brickColumnCount; c++) {
-    for (let r = 0; r < brickRowCount; r++) {
-      let b = bricks[c][r];
-      if (b.status == 1) {
-        if (x > b.x && x < b.x + brickWidth && y > b.y && y < b.y + brickHeight) {
-          dy = -dy;
-          b.status = 0;
-          score++;
-          if (score == brickRowCount * brickColumnCount) {
-            alert(`YOU WIN, CONGRATULATIONS! ${requestId}`);
-            score = 0;
-            level++;
-            dx = Math.abs(dx * 2);
-            dy = Math.abs(dy * 2) * -1;
-
-            ballRadius -= 2;
-            brickRowCount += 1;
-            x = canvas.width / 2;
-            y = canvas.height - 30;
-            paddleX = (canvas.width - paddleWidth) / 2;
-            buildBricks();
-            drawBall();
-            if (level > 3) {
-              alert("You are winner!");
-              document.location.reload();
-            }
-          }
-        }
-      }
-      ctx.fillStyle = "#0095DD";
-    }
-  }
-}
-
 function drawScore() {
   ctx.font = "16px Arial";
   ctx.fillStyle = "#0095DD";
@@ -160,30 +120,7 @@ function drawLevel() {
   ctx.fillText("Level: " + level, canvas.width - 132, 20);
 }
 
-function mouseMoveHandler(e) {
-  let relativeX = e.clientX - canvas.offsetLeft;
-  if (relativeX > 0 && relativeX < canvas.width) {
-    paddleX = relativeX - paddleWidth / 2;
-  }
-}
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height); // очищение поля
-  drawPaddle();
-  drawScore();
-  drawLives();
-  drawLevel();
-  drawBricks();
-  drawBall(); // отрисовка мяча.
-  collisionDetection();
-  x += dx;
-  y += dy; // перемещение мячика путем изменения координат.
-
-  if (rightPressed && paddleX < canvas.width - paddleWidth) {
-    paddleX += 5; // изменение координат при нажатии на кнопки
-  } else if (leftPressed && paddleX > 0) {
-    paddleX -= 5;
-  }
-
+function ballReflection() {
   if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) {
     // откскок от стенок
     dx = -dx;
@@ -208,7 +145,79 @@ function draw() {
       }
     }
   }
+}
 
-  requestId = requestAnimationFrame(draw);
+document.addEventListener("keydown", keyDownHandler);
+document.addEventListener("keyup", keyUpHandler);
+document.addEventListener("mousemove", mouseMoveHandler);
+
+function keyDownHandler(e) {
+  // когда кнопка нажата
+  if (e.keyCode == 39) {
+    // код 37 — это клавиша стрелка влево
+    rightPressed = true; // 39 — стрелка вправо.
+  } else if (e.keyCode == 37) {
+    leftPressed = true;
+  }
+}
+
+function keyUpHandler(e) {
+  // когда кнопка отжата
+  if (e.keyCode == 39) {
+    rightPressed = false;
+  } else if (e.keyCode == 37) {
+    leftPressed = false;
+  }
+}
+
+function paddleRotation() {
+  if (rightPressed && paddleX < canvas.width - paddleWidth) {
+    paddleX += 5; // изменение координат при нажатии на кнопки
+  } else if (leftPressed && paddleX > 0) {
+    paddleX -= 5;
+  }
+}
+
+function mouseMoveHandler(e) {
+  let relativeX = e.clientX - canvas.offsetLeft;
+  if (relativeX > 0 && relativeX < canvas.width) {
+    paddleX = relativeX - paddleWidth / 2;
+  }
+}
+
+function collisionDetection() {
+  for (let c = 0; c < brickColumnCount; c++) {
+    for (let r = 0; r < brickRowCount; r++) {
+      let b = bricks[c][r];
+      if (b.status == 1) {
+        if (x > b.x && x < b.x + brickWidth && y > b.y && y < b.y + brickHeight) {
+          dy = -dy;
+          b.status = 0;
+          score++;
+          if (score == brickRowCount * brickColumnCount) {
+            nextLevel();
+          }
+        }
+      }
+      ctx.fillStyle = "#0095DD";
+    }
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height); // очищение поля
+  drawPaddle();
+  drawScore();
+  drawLives();
+  drawLevel();
+  drawBricks();
+  drawBall(); // отрисовка мяча.
+  collisionDetection();
+  ballReflection();
+  paddleRotation();
+  x += dx;
+  y += dy; // перемещение мячика путем изменения координат.
+
+  requestAnimationFrame(draw);
 }
 draw();
